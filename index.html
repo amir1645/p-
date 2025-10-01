@@ -1,0 +1,82 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="fa">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PToken DApp</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div id="app">
+    <h1 class="title">PToken DApp</h1>
+    <button onclick="connectWallet()" class="button">اتصال به کیف پول</button>
+    <p id="account" class="account"></p>
+    <div id="register-section" class="section" style="display: none;">
+      <h2>ثبت‌نام</h2>
+      <input id="upline-address" type="text" placeholder="آدرس آپلاین" class="input">
+      <label>
+        <input type="radio" name="place" value="left" checked> سمت چپ
+      </label>
+      <label>
+        <input type="radio" name="place" value="right"> سمت راست
+      </label>
+      <button onclick="register()" class="button">ثبت‌نام</button>
+    </div>
+    <p id="message" class="message"></p>
+    <div id="user-info" class="section" style="display: none;">
+      <h2>اطلاعات کاربر</h2>
+      <p>شناسه: <span id="user-id"></span></p>
+      <p>آپلاین: <span id="user-upline"></span></p>
+      <p>تعداد سمت چپ: <span id="left-count"></span></p>
+      <p>تعداد سمت راست: <span id="right-count"></span></p>
+      <p>تعادل خورده: <span id="balance-count"></span></p>
+      <p>تعادل سیو شده: <span id="saved-balance-count"></span></p>
+    </div>
+    <div id="tree-section" class="section" style="display: none;">
+      <h2>ساختار درختی</h2>
+      <div id="tree"></div>
+    </div>
+  </div>
+</body>
+</html>
